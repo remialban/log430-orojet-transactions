@@ -1,0 +1,33 @@
+name: Test Only
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name : Setup bdd
+        run: mvn clean install -DskipTests
+
+      - name: Setup bdd postgres
+        run: |
+          docker run -d --name postgres-test -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=transactions_db -p 5435:5432 postgres:16
+          sleep 10
+      - name: Run tests
+        run: mvn -Dtest=*Test test
+
+
