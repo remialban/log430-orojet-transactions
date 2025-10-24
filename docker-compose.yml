@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres-transactions
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: transactions_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data_transactions:/var/lib/postgresql/data
+    networks:
+      - usernet
+
+  transaction-service:
+    build: .
+    container_name: transaction-service
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactions_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    #ports:
+    #  - "8080:8080"
+    networks:
+      - usernet
+
+networks:
+  usernet:
+    driver: bridge
+
+volumes:
+  postgres_data_transactions:
