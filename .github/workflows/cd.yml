@@ -1,0 +1,13 @@
+# on self hosted machine deploy :
+name: CD Pipeline
+on:
+  push:
+    branches: [ main ]
+    workflow_dispatch:
+jobs:
+    deploy:
+        runs-on: self-hosted
+        steps:
+          - name: Deploy Services
+            run: |
+              bash /home/log430/phase2/deploy.sh
