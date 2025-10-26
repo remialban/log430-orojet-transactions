@@ -5,6 +5,9 @@ import ca.log430.transactions.domain.model.OrdreType;
 import ca.log430.transactions.ports.out.OrderRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +39,23 @@ public class OrderController {
 
             // Call api to get current price
             RestTemplate restTemplate = new RestTemplate();
-            JsonNode response = restTemplate.getForObject("http://"+  this.environment.getProperty("GATEWAY_HOST") + "/users/" + String.valueOf(ordre.getUserId()), JsonNode.class);
+
+            HttpHeaders headers = new HttpHeaders();
+            String token = this.environment.getProperty("token");
+            headers.set("Authorization", "Bearer " + token); // <-- ton token JWT ici
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            // Appeler le service distant avec les headers
+            ResponseEntity<JsonNode> responseRest = restTemplate.exchange(
+                    "http://" + this.environment.getProperty("GATEWAY_HOST") + "/users/" + ordre.getUserId(),
+                    HttpMethod.GET,
+                    entity,
+                    JsonNode.class
+            );
+
+            JsonNode response = responseRest.getBody();
+
             int user_id = response.get("data").get("id").asInt();
 
             if (user_id != ordre.getUserId()) {
@@ -71,7 +90,7 @@ public class OrderController {
     }
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<Response<Ordre>> getOrderById(Integer orderId) {
+    public ResponseEntity<Response<Ordre>> getOrderById(@PathVariable Integer orderId) {
         try {
             Optional<Ordre> ordre = this.orderRepository.findById(orderId);
 
