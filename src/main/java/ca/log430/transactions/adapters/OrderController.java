@@ -140,8 +140,10 @@ public class OrderController {
     private Optional<Integer> extractUserIdFromToken(String token) {
         try {
             String[] parts = token.split("\\.");
-            if (parts.length < 2) return Optional.empty();
+            System.out.println("las bas");
 
+            if (parts.length < 2) return Optional.empty();
+            System.out.println("ici");
             String payload = parts[1];
             byte[] decoded = java.util.Base64.getUrlDecoder().decode(payload);
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -149,12 +151,18 @@ public class OrderController {
 
             // cherche d'abord "userId", sinon "id"
             if (node.has("userId") && node.get("userId").canConvertToInt()) {
+                System.out.println("dans if ");
+
                 return Optional.of(node.get("userId").asInt());
             }
+            return Optional.of(Integer.valueOf(node.get("userId").asText()));
+            /*System.out.println("exterieur if");
+            System.out.println(node.get("userId"));
+
             if (node.has("id") && node.get("id").canConvertToInt()) {
                 return Optional.of(node.get("id").asInt());
             }
-            return Optional.empty();
+            return Optional.empty();*/
         } catch (Exception e) {
             return Optional.empty();
         }
