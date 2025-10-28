@@ -1,7 +1,7 @@
-package ca.log430.transactions;
+package ca.log430.transactions.adapters;
 
+import ca.log430.transactions.Response;
 import ca.log430.transactions.domain.model.Ordre;
-import ca.log430.transactions.domain.model.OrdreType;
 import ca.log430.transactions.ports.out.OrderRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.core.env.Environment;
@@ -9,11 +9,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.http.HttpClient;
 import java.util.List;
 import java.util.Optional;
 
