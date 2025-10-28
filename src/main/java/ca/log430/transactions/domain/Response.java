@@ -1,4 +1,4 @@
-package ca.log430.transactions;
+package ca.log430.transactions.domain;
 
 public class Response<T> {
 

@@ -1,6 +1,6 @@
 package ca.log430.transactions.adapters;
 
-import ca.log430.transactions.Response;
+import ca.log430.transactions.domain.Response;
 import ca.log430.transactions.domain.model.Ordre;
 import ca.log430.transactions.ports.out.OrderRepository;
 import com.fasterxml.jackson.databind.JsonNode;
