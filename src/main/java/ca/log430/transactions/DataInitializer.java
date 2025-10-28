@@ -24,11 +24,13 @@ public class DataInitializer implements CommandLineRunner {
             Ordre ordre1 = new Ordre();
             ordre1.setType(OrdreType.ACHAT);
             ordre1.setAmount(100);
+            ordre1.setUserId(1);
             orderRepository.save(ordre1);
 
             Ordre ordre2 = new Ordre();
             ordre2.setType(OrdreType.VENTE);
             ordre2.setAmount(42);
+            ordre2.setUserId(2);
             orderRepository.save(ordre2);
 
             System.out.println("✅ Données initiales insérées !");
