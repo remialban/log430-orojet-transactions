@@ -115,7 +115,7 @@ public class OrderController {
     }
 
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<Response<String>> deleteOrderById(@PathVariable Integer orderId) {
+    public ResponseEntity<Response<String>> deleteOrderById(@PathVariable Integer orderId, HttpServletRequest request) {
         try {
 
             Optional<Ordre> ordre = this.orderRepository.findById(orderId);
@@ -124,6 +124,21 @@ public class OrderController {
             }
             // check if userId in JWT Token in bearer authentification is the same as the userId of the order
             // get userId from bearer token
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(new Response<>(null, "Missing or invalid Authorization header"));
+            }
+
+            String tokenUser = authHeader.substring(7);
+            Integer userId = this.extractUserIdFromToken(tokenUser).orElse(null);
+
+            if (userId == null) {
+                return ResponseEntity.status(400).body(new Response<>(null, "User ID is required"));
+            }
+            if (!userId.equals(ordre.get().getUserId())) {
+                return ResponseEntity.status(403).body(new Response<>(null, "User ID in token does not match user ID in order"));
+            }
+
 
 
 
@@ -169,12 +184,28 @@ public class OrderController {
     }
 
     @PutMapping("/{orderId}")
-    public ResponseEntity<Response<Ordre>> updateOrderById(@PathVariable Integer orderId, @RequestBody Ordre ordre) {
+    public ResponseEntity<Response<Ordre>> updateOrderById(@PathVariable Integer orderId, @RequestBody Ordre ordre, HttpServletRequest request) {
         try {
             Optional<Ordre> existingOrder = this.orderRepository.findById(orderId);
             if (existingOrder.isEmpty()) {
                 return ResponseEntity.status(404).body(new Response<>(null, "Order not found"));
             }
+
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(new Response<>(null, "Missing or invalid Authorization header"));
+            }
+
+            String tokenUser = authHeader.substring(7);
+            Integer userId = this.extractUserIdFromToken(tokenUser).orElse(null);
+
+            if (userId == null) {
+                return ResponseEntity.status(400).body(new Response<>(null, "User ID is required"));
+            }
+            if (!userId.equals(ordre.getUserId())) {
+                return ResponseEntity.status(403).body(new Response<>(null, "User ID in token does not match user ID in order"));
+            }
+
             ordre.setId(orderId);
             ordre = this.orderRepository.save(ordre);
             return ResponseEntity.ok(new Response<>(ordre, null));
