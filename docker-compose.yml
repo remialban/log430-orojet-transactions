@@ -14,17 +14,46 @@ services:
       - postgres_data_transactions:/var/lib/postgresql/data
     networks:
       - usernet
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8.2.3
+    container_name: redis-transactions
+    restart: unless-stopped
+    ports:
+      - "6380:6379"           # expose sur l'hôte (optionnel si vous n'en avez pas besoin)
+    volumes:
+      - redis-data-transactions:/data      # persistance des données
+    command: [ "redis-server" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "changeme", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - usernet
+
 
   transaction-service:
     build: .
     container_name: transaction-service
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactions_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "8081:8081"
     networks:
@@ -36,3 +65,4 @@ networks:
 
 volumes:
   postgres_data_transactions:
+  redis-data-transactions:

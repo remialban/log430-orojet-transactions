@@ -16,6 +16,9 @@ public class Ordre {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Integer id;
 
+    @Version
+    private Long version;
+
     // JPA annotations: enum, specify values :
 
     @Enumerated(EnumType.STRING)
