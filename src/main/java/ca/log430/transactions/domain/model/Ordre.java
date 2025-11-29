@@ -13,10 +13,11 @@ public class Ordre {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_WRITE)
     private Integer id;
 
     @Version
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long version;
 
     // JPA annotations: enum, specify values :
@@ -30,6 +31,9 @@ public class Ordre {
     private Integer userId;
 
     private Integer amount;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    private Carnet carnet;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean isFinished = false;
@@ -88,5 +92,13 @@ public class Ordre {
 
     public void setFinished(boolean finished) {
         isFinished = finished;
+    }
+
+    public Carnet getCarnet() {
+        return carnet;
+    }
+
+    public void setCarnet(Carnet carnet) {
+        this.carnet = carnet;
     }
 }

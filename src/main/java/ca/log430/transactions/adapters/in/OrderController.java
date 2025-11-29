@@ -1,11 +1,16 @@
-package ca.log430.transactions.adapters;
+package ca.log430.transactions.adapters.in;
 
+import ca.log430.transactions.adapters.out.OrderAdapter;
 import ca.log430.transactions.domain.Response;
 import ca.log430.transactions.domain.model.Ordre;
 import ca.log430.transactions.ports.out.OrderRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.core.env.Environment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -17,23 +22,53 @@ import java.util.Optional;
 @RequestMapping("/orders")
 public class OrderController {
 
+    Logger logger = LogManager.getLogger(OrderController.class);
+
     OrderRepository orderRepository;
+
+
+    OrderAdapter orderAdapter;
+
+
     Environment environment;
-    public OrderController(OrderRepository orderRepository, Environment environment) {
+    public OrderController(OrderRepository orderRepository, Environment environment, OrderAdapter orderAdapter) {
         this.orderRepository = orderRepository;
         this.environment = environment;
+        this.orderAdapter = orderAdapter;
     }
 
-    // request Order
+    public boolean isGranted(Integer userId, HttpServletRequest request) {
+        try {
+            String token = request.getHeader("Authorization").substring(7);
+            String[] parts = token.split("\\.");
+
+            if (parts.length < 2) return false;
+
+
+            String payload = parts[1];
+            byte[] decoded = java.util.Base64.getUrlDecoder().decode(payload);
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(decoded);
+
+            if (node.has("role") && node.get("role").asText().equals("SERVICE")) {
+                return true;
+            }
+
+            if (node.has("userId") && node.get("userId").canConvertToInt()) {
+
+                return userId.equals(node.get("userId").asInt());
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+
+    }
     @PostMapping
     public ResponseEntity<Response<Ordre>> createOrder(@RequestBody Ordre ordre, HttpServletRequest request) {
-
-
-        // persist ordre
-
         try {
             String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            /*if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(401).body(new Response<>(null, "Missing or invalid Authorization header"));
             }
 
@@ -44,6 +79,10 @@ public class OrderController {
                 return ResponseEntity.status(400).body(new Response<>(null, "User ID is required"));
             }
             if (!userId.equals(ordre.getUserId())) {
+                return ResponseEntity.status(403).body(new Response<>(null, "User ID in token does not match user ID in order"));
+            }*/
+
+            if (!isGranted(ordre.getUserId(), request)) {
                 return ResponseEntity.status(403).body(new Response<>(null, "User ID in token does not match user ID in order"));
             }
             // Call api to get current price
@@ -82,29 +121,46 @@ public class OrderController {
 
 
     @GetMapping
-    public ResponseEntity<Response<List<Ordre>>> getAllOrders(@RequestParam(required = false) Integer userId) {
+    public ResponseEntity<Response<Page<Ordre>>> getAllOrders(
+            @RequestParam(required = false) Integer userId,
+            @RequestParam(required = false, defaultValue = "0") Integer pageNumber,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+            HttpServletRequest request) {
         try {
 
             if (userId != null) {
-                List<Ordre> userOrders = this.orderRepository.findOrdreByUserId(userId);
-                return ResponseEntity.ok(new Response<>(userOrders, null));
+                logger.error("dans userId");
+
+                if (!isGranted(userId, request)) {
+                    return ResponseEntity.status(403).body(new Response<>(null, "You are not authorized to view these orders"));
+                }
+                Page<Ordre> ordres = this.orderAdapter.findByUserId(userId, pageNumber, pageSize);
+                return ResponseEntity.ok(new Response<>(ordres, null));
             }
-            List<Ordre> orders = this.orderRepository.findAll();
 
-
-            return ResponseEntity.ok(new Response<>(orders, null));
+            if (!isGranted(1, request)) {
+                return ResponseEntity.status(403).body(new Response<>(null, "You are not authorized to view these orders"));
+            }
+            Page<Ordre> ordres = this.orderAdapter.findAll( pageNumber, pageSize);
+            return ResponseEntity.ok(new Response<>(ordres, null));
         } catch (Exception ex) {
             return ResponseEntity.status(500).body(new Response<>(null, ex.getMessage()));
         }
     }
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<Response<Ordre>> getOrderById(@PathVariable Integer orderId) {
+    public ResponseEntity<Response<Ordre>> getOrderById(@PathVariable Integer orderId, HttpServletRequest request) {
         try {
+
             Optional<Ordre> ordre = this.orderRepository.findById(orderId);
 
             if (ordre.isEmpty()) {
                 return ResponseEntity.status(404).body(new Response<>(null, "Order not found"));
+            }
+
+            if (!isGranted(ordre.get().getUserId(), request)) {
+                return ResponseEntity.status(403).body(new Response<>(null, "You are not authorized to view this order"));
+
             }
 
             return ResponseEntity.ok(new Response<>(ordre.get(), null));
@@ -171,13 +227,6 @@ public class OrderController {
                 return Optional.of(node.get("userId").asInt());
             }
             return Optional.of(Integer.valueOf(node.get("userId").asText()));
-            /*System.out.println("exterieur if");
-            System.out.println(node.get("userId"));
-
-            if (node.has("id") && node.get("id").canConvertToInt()) {
-                return Optional.of(node.get("id").asInt());
-            }
-            return Optional.empty();*/
         } catch (Exception e) {
             return Optional.empty();
         }

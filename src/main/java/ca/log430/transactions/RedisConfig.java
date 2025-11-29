@@ -3,6 +3,7 @@ package ca.log430.transactions;
 import ca.log430.transactions.domain.model.Ordre;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -12,6 +13,9 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 import java.time.Duration;
 
@@ -38,5 +42,23 @@ public class RedisConfig {
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(config)
                 .build();
+    }
+
+    @Bean
+    public JedisPool jedisPool(
+            @Value("${spring.data.redis.host}") String host,
+            @Value("${spring.data.redis.port}") int port) {
+
+        JedisPoolConfig poolConfig = new JedisPoolConfig();
+        // Config du pool
+        poolConfig.setMaxTotal(8);
+        poolConfig.setMaxIdle(8);
+        poolConfig.setMinIdle(0);
+
+        // Désactiver JMX via le poolConfig
+        poolConfig.setJmxEnabled(false);
+
+        // Création du JedisPool
+        return new JedisPool(poolConfig, host, port);
     }
 }
