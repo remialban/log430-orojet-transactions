@@ -24,7 +24,7 @@ public class OnOrderListenner {
     @KafkaListener(topics = "newOrder", groupId = "order-group", concurrency = "1")
     public void consumeOrder(Ordre ordre) {
         logger.info("Received new order : {} type: {} amount: {}", ordre.getId(), ordre.getType(), ordre.getAmount());
-
+        return;
         try (var jedis = jedisPool.getResource()) {
             String key = "order:" + ordre.getCarnet().getId() + ":" + ordre.getType();
 
