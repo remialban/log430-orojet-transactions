@@ -2,6 +2,7 @@ package ca.log430.transactions.ports.out;
 
 import ca.log430.transactions.domain.model.Carnet;
 import ca.log430.transactions.domain.model.Ordre;
+import ca.log430.transactions.domain.model.OrdreType;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -41,4 +42,6 @@ public interface OrderRepository extends JpaRepository<Ordre, Integer> {
             @CacheEvict(value = "ordreByUser", key = "#entity.userId")
     })
     void deleteById(Integer integer);
+
+    Optional<Ordre> findTopByCarnetAndTypeAndIsFinishedFalseOrderByCreatedAt(Carnet carnet, OrdreType type);
 }

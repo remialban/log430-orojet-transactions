@@ -3,6 +3,7 @@ package ca.log430.transactions.adapters.in;
 import ca.log430.transactions.adapters.out.OrderAdapter;
 import ca.log430.transactions.domain.Response;
 import ca.log430.transactions.domain.model.Ordre;
+import ca.log430.transactions.domain.model.OrdreType;
 import ca.log430.transactions.ports.out.OrderRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.servlet.http.HttpServletRequest;
@@ -85,6 +86,15 @@ public class OrderController {
             if (!isGranted(ordre.getUserId(), request)) {
                 return ResponseEntity.status(403).body(new Response<>(null, "User ID in token does not match user ID in order"));
             }
+
+            if (ordre.getCarnet() == null) {
+                return ResponseEntity.status(400).body(new Response<>(null, "Carnet is required"));
+            }
+
+            if (ordre.getAmount() == null || ordre.getAmount() <= 0) {
+                return ResponseEntity.status(400).body(new Response<>(null, "Amount must be greater than zero"));
+            }
+
             // Call api to get current price
             RestTemplate restTemplate = new RestTemplate();
 
@@ -110,7 +120,7 @@ public class OrderController {
                 return ResponseEntity.status(400).body(new Response<>(null, "User not found"));
             }
 
-            ordre = this.orderRepository.save(ordre);
+            ordre = this.orderAdapter.save(ordre, response.get("data").get("email").asText());
             return ResponseEntity.ok(new Response<>(ordre, null));
 
 
@@ -232,6 +242,30 @@ public class OrderController {
         }
     }
 
+    private Optional<String> extractEmailFromToken(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            System.out.println("las bas");
+
+            if (parts.length < 2) return Optional.empty();
+            System.out.println("ici");
+            String payload = parts[1];
+            byte[] decoded = java.util.Base64.getUrlDecoder().decode(payload);
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(decoded);
+
+            // cherche d'abord "userId", sinon "id"
+            if (node.has("email")) {
+                System.out.println("dans if ");
+
+                return Optional.of(node.get("email").asText());
+            }
+            return Optional.of(node.get("email").asText());
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
     @PutMapping("/{orderId}")
     public ResponseEntity<Response<Ordre>> updateOrderById(@PathVariable Integer orderId, @RequestBody Ordre ordre, HttpServletRequest request) {
         try {
@@ -251,13 +285,28 @@ public class OrderController {
             if (userId == null) {
                 return ResponseEntity.status(400).body(new Response<>(null, "User ID is required"));
             }
-            if (!userId.equals(ordre.getUserId())) {
+
+            System.out.println("userId from token: " + userId);
+            System.out.println("userId from order: " + existingOrder.get().getUserId());
+            if (!userId.equals(existingOrder.get().getUserId())) {
                 return ResponseEntity.status(403).body(new Response<>(null, "User ID in token does not match user ID in order"));
             }
 
-            ordre.setId(orderId);
-            ordre = this.orderRepository.save(ordre);
-            return ResponseEntity.ok(new Response<>(ordre, null));
+            if (ordre.isFinished()) {
+                return ResponseEntity.status(403).body(new Response<>(null, "L'ordre a été réalisé, vous ne pouvez donc pas le modifier"));
+            }
+            Ordre newOrdre = existingOrder.get();
+            newOrdre.setUserId(userId);
+
+            if (newOrdre.getType() == OrdreType.ACHAT && newOrdre.getAmount() < ordre.getAmount()) {
+                newOrdre.setAmount(ordre.getAmount());
+            }
+
+            if (newOrdre.getType() == OrdreType.VENTE && newOrdre.getAmount() > ordre.getAmount()) {
+                newOrdre.setAmount(ordre.getAmount());
+            }
+            newOrdre = this.orderAdapter.save(newOrdre, this.extractEmailFromToken(tokenUser).toString());
+            return ResponseEntity.ok(new Response<>(newOrdre, null));
         } catch (Exception ex) {
             return ResponseEntity.status(500).body(new Response<>(null, ex.getMessage()));
         }

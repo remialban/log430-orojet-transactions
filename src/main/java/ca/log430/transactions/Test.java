@@ -18,7 +18,7 @@ public class Test implements CommandLineRunner {
         Ordre ordre = new Ordre();
         ordre.setAmount(100);
         ordre.setType(OrdreType.ACHAT);
-        ordreAdapter.save(ordre);
+        //ordreAdapter.save(ordre);
 
 
         

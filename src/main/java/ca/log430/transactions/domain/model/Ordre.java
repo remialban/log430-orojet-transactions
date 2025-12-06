@@ -34,7 +34,7 @@ public class Ordre {
 
     @ManyToOne(fetch = FetchType.EAGER)
     private Carnet carnet;
-
+    
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean isFinished = false;
 
